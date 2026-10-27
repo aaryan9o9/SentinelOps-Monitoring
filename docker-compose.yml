@@ -1,0 +1,45 @@
+services:
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sentinelops-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sentinelops-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - sentinelops_grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  postgres:
+    image: postgres:16
+    container_name: sentinelops-postgres
+    environment:
+      POSTGRES_DB: sentinelops
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - sentinelops_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sentinelops"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  sentinelops_pgdata:
+  sentinelops_grafana_data:
